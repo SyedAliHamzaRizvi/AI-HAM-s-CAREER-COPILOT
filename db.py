@@ -14,7 +14,6 @@ engine = create_engine(
     pool_pre_ping=True,
     connect_args={
         "ssl": {
-            "ca": r"C:\Users\DELL\Desktop\python\AI CAREER COPILOT\isrgrootx1.pem",
             "verify_cert": True,
             "verify_identity": True
         }
