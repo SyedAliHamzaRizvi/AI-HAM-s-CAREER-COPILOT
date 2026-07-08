@@ -1,0 +1,3 @@
+URL:mysql+pymysql://34nYXCSV3XNFWjJ.root:cU7d1A2dexpWWD9Z"
+    "@gateway01.ap-southeast-1.prod.aws.tidbcloud.com:4000/test
+Passowrd:cU7d1A2dexpWWD9Z
