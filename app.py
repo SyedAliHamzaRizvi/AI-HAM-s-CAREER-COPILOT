@@ -36,11 +36,7 @@ def signup():
         if existing_user:
             return "User already exists"
 
-        user = models.User(
-            name=name,
-            email=email,
-            password=password
-        )
+        user = models.User(name=name, email=email, password=password)
 
         db.add(user)
         db.commit()
@@ -48,7 +44,6 @@ def signup():
         return redirect("/login")
 
     return render_template("signup.html")
-
 
 
 # LOGIN
@@ -62,12 +57,7 @@ def login():
         email = request.form.get("email")
         password = request.form.get("password")
 
-
-        user = db.query(models.User).filter_by(
-            email=email,
-            password=password
-        ).first()
-
+        user = db.query(models.User).filter_by(email=email, password=password).first()
 
         if user:
 
@@ -78,9 +68,7 @@ def login():
         else:
             return "Invalid Credentials"
 
-
     return render_template("login.html")
-
 
 
 # DASHBOARD
@@ -90,16 +78,11 @@ def dashboard():
     if "user_id" not in session:
         return redirect("/login")
 
-
     db = SessionLocal()
 
-    user = db.query(models.User).filter_by(
-        id=session["user_id"]
-    ).first()
-
+    user = db.query(models.User).filter_by(id=session["user_id"]).first()
 
     result = None
-
 
     if request.method == "POST":
 
@@ -107,15 +90,11 @@ def dashboard():
 
         resume_text = request.form.get("resume")
 
-
         file = request.files.get("file")
-
-
 
         # File handling
 
         if file and file.filename != "":
-
 
             if file.filename.endswith(".pdf"):
 
@@ -128,20 +107,13 @@ def dashboard():
                     for page in pdf_reader.pages:
                         text += page.extract_text() or ""
 
-
                     resume_text = text
-
 
                 except Exception as e:
 
-                    result = {
-                        "error": f"PDF error: {str(e)}"
-                    }
-
-
+                    result = {"error": f"PDF error: {str(e)}"}
 
             elif file.filename.endswith(".docx"):
-
 
                 try:
 
@@ -149,161 +121,78 @@ def dashboard():
 
                     text = ""
 
-
                     for para in doc.paragraphs:
                         text += para.text + "\n"
 
-
                     resume_text = text
-
 
                 except Exception as e:
 
-                    result = {
-                        "error": f"Docx error: {str(e)}"
-                    }
-
-
+                    result = {"error": f"Docx error: {str(e)}"}
 
         if resume_text and user_goal:
 
-
             try:
 
-
-                result = analyze_resume(
-                    resume_text,
-                    user_goal
-                )
-
-
+                result = analyze_resume(resume_text, user_goal)
 
                 # Save to db
 
                 report = models.Report(
-
-                    user_id=user.id,
-
-                    resume_text=resume_text,
-
-                    result=json.dumps(result)
-
+                    user_id=user.id, resume_text=resume_text, result=json.dumps(result)
                 )
-
 
                 db.add(report)
 
                 db.commit()
 
-
-
             except Exception as e:
 
+                result = {"error": f"AI error: {str(e)}"}
 
-                result = {
-                    "error": f"AI error: {str(e)}"
-                }
-
-
-
-    return render_template(
-
-        "dashboard.html",
-
-        user=user.name,
-
-        result=result
-
-    )
-
-
-
+    return render_template("dashboard.html", user=user.name, result=result)
 
 
 # HISTORY
 @app.route("/history")
 def history():
 
-
     if "user_id" not in session:
 
         return redirect("/login")
 
-
-
     db = SessionLocal()
 
+    user = db.query(models.User).filter_by(id=session["user_id"]).first()
 
-
-    user = db.query(models.User).filter_by(
-
-        id=session["user_id"]
-
-    ).first()
-
-
-
-    reports = db.query(models.Report).filter_by(
-
-        user_id=user.id
-
-    ).all()
-
-
+    reports = db.query(models.Report).filter_by(user_id=user.id).all()
 
     # Convert JSON string to dictionary
 
     parsed_reports = []
 
-
     for r in reports:
-
 
         try:
 
             parsed_result = json.loads(r.result)
 
-
         except:
 
             parsed_result = []
 
+        parsed_reports.append({"resume": r.resume_text, "result": parsed_result})
 
-
-        parsed_reports.append({
-
-            "resume": r.resume_text,
-
-            "result": parsed_result
-
-        })
-
-
-
-    return render_template(
-
-        "history.html",
-
-        reports=parsed_reports
-
-    )
-
-
-
+    return render_template("history.html", reports=parsed_reports)
 
 
 # LOGOUT
 @app.route("/logout")
 def logout():
 
-
     session.pop("user_id", None)
 
-
     return redirect("/login")
-
-
-
 
 
 if __name__ == "__main__":
