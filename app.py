@@ -20,9 +20,11 @@ def home():
     return redirect("/login")
 
 
+
 # SIGNUP
 @app.route("/signup", methods=["GET", "POST"])
 def signup():
+
     db = SessionLocal()
 
     if request.method == "POST":
@@ -36,14 +38,21 @@ def signup():
         if existing_user:
             return "User already exists"
 
-        user = models.User(name=name, email=email, password=password)
+
+        user = models.User(
+            name=name,
+            email=email,
+            password=password
+        )
 
         db.add(user)
         db.commit()
 
         return redirect("/login")
 
+
     return render_template("signup.html")
+
 
 
 # LOGIN
@@ -52,12 +61,18 @@ def login():
 
     db = SessionLocal()
 
+
     if request.method == "POST":
 
         email = request.form.get("email")
         password = request.form.get("password")
 
-        user = db.query(models.User).filter_by(email=email, password=password).first()
+
+        user = db.query(models.User).filter_by(
+            email=email,
+            password=password
+        ).first()
+
 
         if user:
 
@@ -65,10 +80,14 @@ def login():
 
             return redirect("/dashboard")
 
+
         else:
+
             return "Invalid Credentials"
 
+
     return render_template("login.html")
+
 
 
 # DASHBOARD
@@ -78,13 +97,44 @@ def dashboard():
     if "user_id" not in session:
         return redirect("/login")
 
+
     db = SessionLocal()
 
-    user = db.query(models.User).filter_by(id=session["user_id"]).first()
+
+    user = db.query(models.User).filter_by(
+        id=session["user_id"]
+    ).first()
+
+
+
+    # LOAD LAST SUCCESSFUL RESULT FROM DATABASE
 
     result = None
 
+
+    latest_report = (
+        db.query(models.Report)
+        .filter_by(user_id=user.id)
+        .order_by(models.Report.id.desc())
+        .first()
+    )
+
+
+    if latest_report:
+
+        try:
+
+            result = json.loads(latest_report.result)
+
+        except:
+
+            result = None
+
+
+
+
     if request.method == "POST":
+
 
         user_goal = request.form.get("role")
 
@@ -92,11 +142,15 @@ def dashboard():
 
         file = request.files.get("file")
 
-        # File handling
+
+
+        # FILE HANDLING
 
         if file and file.filename != "":
 
+
             if file.filename.endswith(".pdf"):
+
 
                 try:
 
@@ -104,16 +158,33 @@ def dashboard():
 
                     text = ""
 
+
                     for page in pdf_reader.pages:
+
                         text += page.extract_text() or ""
+
 
                     resume_text = text
 
+
                 except Exception as e:
 
-                    result = {"error": f"PDF error: {str(e)}"}
+
+                    result = {
+                        "error": f"PDF error: {str(e)}"
+                    }
+
+
+                    return render_template(
+                        "dashboard.html",
+                        user=user.name,
+                        result=result
+                    )
+
+
 
             elif file.filename.endswith(".docx"):
+
 
                 try:
 
@@ -121,78 +192,208 @@ def dashboard():
 
                     text = ""
 
+
                     for para in doc.paragraphs:
+
                         text += para.text + "\n"
+
 
                     resume_text = text
 
+
+
                 except Exception as e:
 
-                    result = {"error": f"Docx error: {str(e)}"}
+
+                    result = {
+                        "error": f"Docx error: {str(e)}"
+                    }
+
+
+                    return render_template(
+                        "dashboard.html",
+                        user=user.name,
+                        result=result
+                    )
+
+
+
 
         if resume_text and user_goal:
 
+
             try:
 
-                result = analyze_resume(resume_text, user_goal)
 
-                # Save to db
-
-                report = models.Report(
-                    user_id=user.id, resume_text=resume_text, result=json.dumps(result)
+                result = analyze_resume(
+                    resume_text,
+                    user_goal
                 )
 
-                db.add(report)
 
-                db.commit()
+
+                # SAVE ONLY SUCCESSFUL RESULTS
+
+                if "error" not in result:
+
+
+                    report = models.Report(
+                        user_id=user.id,
+                        resume_text=resume_text,
+                        result=json.dumps(result)
+                    )
+
+
+                    db.add(report)
+
+                    db.commit()
+
+
 
             except Exception as e:
 
-                result = {"error": f"AI error: {str(e)}"}
 
-    return render_template("dashboard.html", user=user.name, result=result)
+                result = {
+                    "error": f"AI error: {str(e)}"
+                }
+
+
+
+
+    return render_template(
+        "dashboard.html",
+        user=user.name,
+        result=result
+    )
+
+
+
+
 
 
 # HISTORY
 @app.route("/history")
 def history():
 
+
     if "user_id" not in session:
 
         return redirect("/login")
 
+
+
     db = SessionLocal()
 
-    user = db.query(models.User).filter_by(id=session["user_id"]).first()
 
-    reports = db.query(models.Report).filter_by(user_id=user.id).all()
 
-    # Convert JSON string to dictionary
+    user = db.query(models.User).filter_by(
+        id=session["user_id"]
+    ).first()
+
+
+
+    reports = (
+        db.query(models.Report)
+        .filter_by(user_id=user.id)
+        .order_by(models.Report.id.desc())
+        .all()
+    )
+
+
 
     parsed_reports = []
 
+
+
     for r in reports:
+
 
         try:
 
             parsed_result = json.loads(r.result)
 
+
         except:
 
-            parsed_result = []
+            parsed_result = {}
 
-        parsed_reports.append({"resume": r.resume_text, "result": parsed_result})
 
-    return render_template("history.html", reports=parsed_reports)
+
+        parsed_reports.append(
+            {
+                "id": r.id,
+                "resume": r.resume_text,
+                "result": parsed_result
+            }
+        )
+
+
+
+    return render_template(
+        "history.html",
+        reports=parsed_reports
+    )
+
+
+
+
+
+
+# DELETE HISTORY
+@app.route("/delete_history/<int:report_id>")
+def delete_history(report_id):
+
+
+    if "user_id" not in session:
+
+        return redirect("/login")
+
+
+
+    db = SessionLocal()
+
+
+
+    report = db.query(models.Report).filter_by(
+        id=report_id,
+        user_id=session["user_id"]
+    ).first()
+
+
+
+    if report:
+
+        db.delete(report)
+
+        db.commit()
+
+
+
+    db.close()
+
+
+    return redirect("/history")
+
+
+
+
 
 
 # LOGOUT
 @app.route("/logout")
 def logout():
 
-    session.pop("user_id", None)
+    session.pop(
+        "user_id",
+        None
+    )
+
 
     return redirect("/login")
+
+
+
+
 
 
 if __name__ == "__main__":

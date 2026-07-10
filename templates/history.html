@@ -4,82 +4,137 @@
 
 <h2>Your History</h2>
 
+
 {% for r in reports %}
+
 
 <div class="card">
 
+
+    <a href="/delete_history/{{ r.id }}">
+        <button style="background:red;">
+            Delete
+        </button>
+    </a>
+
+
+
     <p><strong>Resume Preview:</strong></p>
+
     <p>{{ r.resume[:150] }}...</p>
+
 
     <hr>
 
 
+
     <h3>Skills</h3>
 
+
     {% if r.result.skills %}
+
     <ul>
+
         {% for s in r.result.skills %}
+
         <li>{{ s }}</li>
+
         {% endfor %}
+
     </ul>
+
     {% else %}
+
     <p>No skills found.</p>
+
     {% endif %}
+
+
 
 
 
     <h3>Missing Skills</h3>
 
+
     {% if r.result.missing_skills %}
+
     <ul>
+
         {% for s in r.result.missing_skills %}
+
         <li>{{ s }}</li>
+
         {% endfor %}
+
     </ul>
+
     {% else %}
+
     <p>No missing skills identified.</p>
+
     {% endif %}
+
+
 
 
 
     <h3>Roadmap</h3>
 
+
     {% if r.result.roadmap %}
 
+
     <ul>
+
         {% for s in r.result.roadmap %}
+
         <li>{{ s }}</li>
+
         {% endfor %}
+
     </ul>
+
 
     {% else %}
 
-    <p>No roadmap available for this analysis.</p>
+    <p>No roadmap available.</p>
 
     {% endif %}
+
 
 
 
 
     <h3>Interview Questions List</h3>
 
+
     {% if r.result.interview_questions %}
 
+
     <ul>
+
         {% for s in r.result.interview_questions %}
+
         <li>{{ s }}</li>
+
         {% endfor %}
+
     </ul>
+
 
     {% else %}
 
     <p>No interview questions available.</p>
 
+
     {% endif %}
+
 
 
 </div>
 
+
 {% endfor %}
+
 
 {% endblock %}
